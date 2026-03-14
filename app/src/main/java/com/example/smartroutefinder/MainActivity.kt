@@ -1,7 +1,6 @@
 package com.example.smartroutefinder
 
-
-
+import android.content.Context
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Bundle
@@ -29,12 +28,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.smartroutefinder.ui.theme.SmartRouteFinderTheme
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import java.util.PriorityQueue
 import kotlin.system.exitProcess
 
@@ -62,7 +64,21 @@ val graph = mapOf(
     "E" to emptyList()
 )
 
-// --- Logic ---
+// --- Persistence Logic ---
+fun saveHistory(context: Context, history: List<PathResult>) {
+    val prefs = context.getSharedPreferences("route_prefs", Context.MODE_PRIVATE)
+    val json = Gson().toJson(history)
+    prefs.edit().putString("history_list", json).apply()
+}
+
+fun loadHistory(context: Context): List<PathResult> {
+    val prefs = context.getSharedPreferences("route_prefs", Context.MODE_PRIVATE)
+    val json = prefs.getString("history_list", null) ?: return emptyList()
+    val type = object : TypeToken<List<PathResult>>() {}.type
+    return Gson().fromJson(json, type)
+}
+
+// --- UCS Logic ---
 fun uniformCostSearch(start: String, goal: String): PathResult? {
     val s = start.uppercase().trim()
     val g = goal.uppercase().trim()
@@ -93,46 +109,64 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             SmartRouteFinderTheme {
+                val context = LocalContext.current
                 var currentScreen by remember { mutableStateOf("home") }
-                val historyList = remember { mutableStateListOf<PathResult>() }
 
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    bottomBar = {
-                        if (currentScreen == "finder") {
-                            BottomAppBar(containerColor = Color.Transparent) {
-                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                    Button(
-                                        onClick = { currentScreen = "history" },
-                                        modifier = Modifier.width(200.dp).height(50.dp)
-                                    ) {
-                                        Text("NEXT", fontWeight = FontWeight.Bold)
+                // Persistent History
+                val historyList = remember {
+                    mutableStateListOf<PathResult>().apply {
+                        addAll(loadHistory(context))
+                    }
+                }
+
+                Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
+                    Scaffold(
+                        containerColor = Color.Black,
+                        modifier = Modifier.fillMaxSize(),
+                        bottomBar = {
+                            if (currentScreen == "finder") {
+                                BottomAppBar(containerColor = Color.Transparent) {
+                                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                        Button(
+                                            onClick = { currentScreen = "history" },
+                                            modifier = Modifier.width(200.dp).height(50.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
+                                        ) {
+                                            Text("NEXT", fontWeight = FontWeight.Bold, color = Color.White)
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                ) { innerPadding ->
-                    Box(modifier = Modifier.padding(innerPadding)) {
-                        when (currentScreen) {
-                            "home" -> HomeScreen { currentScreen = "finder" }
-                            "finder" -> FinderScreen(
-                                onRestart = { currentScreen = "home" },
-                                onResultGenerated = { historyList.add(0, it) }
-                            )
-                            "history" -> HistoryScreen(
-                                history = historyList,
-                                onBack = { currentScreen = "finder" },
-                                onNext = { currentScreen = "exit" },
-                                onDelete = { historyList.remove(it) },
-                                onToggleLike = { item ->
-                                    val index = historyList.indexOf(item)
-                                    if (index != -1) {
-                                        historyList[index] = historyList[index].copy(isLiked = !item.isLiked)
+                    ) { innerPadding ->
+                        Box(modifier = Modifier.padding(innerPadding)) {
+                            when (currentScreen) {
+                                "home" -> HomeScreen { currentScreen = "finder" }
+                                "finder" -> FinderScreen(
+                                    onRestart = { currentScreen = "home" },
+                                    onResultGenerated = { result ->
+                                        historyList.add(0, result)
+                                        saveHistory(context, historyList)
                                     }
-                                }
-                            )
-                            "exit" -> ExitScreen()
+                                )
+                                "history" -> HistoryScreen(
+                                    history = historyList,
+                                    onBack = { currentScreen = "finder" },
+                                    onNext = { currentScreen = "exit" },
+                                    onDelete = { result ->
+                                        historyList.remove(result)
+                                        saveHistory(context, historyList)
+                                    },
+                                    onToggleLike = { item ->
+                                        val index = historyList.indexOf(item)
+                                        if (index != -1) {
+                                            historyList[index] = historyList[index].copy(isLiked = !item.isLiked)
+                                            saveHistory(context, historyList)
+                                        }
+                                    }
+                                )
+                                "exit" -> ExitScreen()
+                            }
                         }
                     }
                 }
@@ -155,8 +189,8 @@ fun HomeScreen(onStart: () -> Unit) {
             modifier = Modifier.size(100.dp)
         )
         Spacer(modifier = Modifier.height(20.dp))
-        Text("Smart Route Finder", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
-        Text("Powered by Uniform Cost Search Algorithm", fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text("Smart Route Finder", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+        Text("Powered by Uniform Cost Search Algorithm", fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = Color.LightGray)
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             "Explore how AI finds the lowest-cost path\nthrough a weighted graph step by step.",
@@ -164,13 +198,17 @@ fun HomeScreen(onStart: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(24.dp))
         Column(horizontalAlignment = Alignment.Start) {
-            Text("📊 Graph Visualization", fontSize = 16.sp)
-            Text("🔎 Step-by-Step Search", fontSize = 16.sp)
-            Text("⭐ Optimal Path Discovery", fontSize = 16.sp)
+            Text("📊 Graph Visualization", fontSize = 16.sp, color = Color.White)
+            Text("🔎 Step-by-Step Search", fontSize = 16.sp, color = Color.White)
+            Text("⭐ Optimal Path Discovery", fontSize = 16.sp, color = Color.White)
         }
         Spacer(modifier = Modifier.height(40.dp))
-        Button(onClick = onStart, modifier = Modifier.width(200.dp).height(50.dp)) {
-            Text("START", fontWeight = FontWeight.Bold)
+        Button(
+            onClick = onStart,
+            modifier = Modifier.width(200.dp).height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
+        ) {
+            Text("START", fontWeight = FontWeight.Bold, color = Color.White)
         }
     }
 }
@@ -197,13 +235,19 @@ fun FinderScreen(onRestart: () -> Unit, onResultGenerated: (PathResult) -> Unit)
         GraphVisualizer()
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text("Select or Enter Start Node:", modifier = Modifier.align(Alignment.Start))
+        Text("Select or Enter Start Node:", modifier = Modifier.align(Alignment.Start), color = Color.White)
         ExposedDropdownMenuBox(expanded = startExpanded, onExpandedChange = { startExpanded = it }) {
             OutlinedTextField(
                 value = startNode,
                 onValueChange = { startNode = it },
-                placeholder = { Text("e.g. A") },
+                placeholder = { Text("e.g. A", color = Color.Gray) },
                 modifier = Modifier.menuAnchor().fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.Gray
+                ),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = startExpanded) }
             )
             ExposedDropdownMenu(expanded = startExpanded, onDismissRequest = { startExpanded = false }) {
@@ -211,13 +255,19 @@ fun FinderScreen(onRestart: () -> Unit, onResultGenerated: (PathResult) -> Unit)
             }
         }
         Spacer(modifier = Modifier.height(10.dp))
-        Text("Select or Enter Destination:", modifier = Modifier.align(Alignment.Start))
+        Text("Select or Enter Destination:", modifier = Modifier.align(Alignment.Start), color = Color.White)
         ExposedDropdownMenuBox(expanded = destExpanded, onExpandedChange = { destExpanded = it }) {
             OutlinedTextField(
                 value = destNode,
                 onValueChange = { destNode = it },
-                placeholder = { Text("e.g. E") },
+                placeholder = { Text("e.g. E", color = Color.Gray) },
                 modifier = Modifier.menuAnchor().fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.Gray
+                ),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = destExpanded) }
             )
             ExposedDropdownMenu(expanded = destExpanded, onDismissRequest = { destExpanded = false }) {
@@ -227,21 +277,23 @@ fun FinderScreen(onRestart: () -> Unit, onResultGenerated: (PathResult) -> Unit)
 
         Spacer(modifier = Modifier.height(30.dp))
 
-        Button(modifier = Modifier.fillMaxWidth().height(55.dp), onClick = {
-            val s = startNode.uppercase().trim()
-            val d = destNode.uppercase().trim()
-
-            if (s !in validNodes || d !in validNodes) {
-                showErrorPopup = true
-            } else {
-                val res = uniformCostSearch(s, d)
-                if (res != null) {
-                    lastResult = res
-                    onResultGenerated(res)
-                    showPopup = true
+        Button(
+            modifier = Modifier.fillMaxWidth().height(55.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)),
+            onClick = {
+                val s = startNode.uppercase().trim()
+                val d = destNode.uppercase().trim()
+                if (s !in validNodes || d !in validNodes) {
+                    showErrorPopup = true
+                } else {
+                    val res = uniformCostSearch(s, d)
+                    if (res != null) {
+                        lastResult = res
+                        onResultGenerated(res)
+                        showPopup = true
+                    }
                 }
-            }
-        }) { Text("CALCULATE PATH") }
+            }) { Text("CALCULATE PATH", color = Color.White) }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -249,35 +301,44 @@ fun FinderScreen(onRestart: () -> Unit, onResultGenerated: (PathResult) -> Unit)
             Button(
                 onClick = onRestart,
                 modifier = Modifier.weight(1f).height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-            ) { Text("RESTART") }
+                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+            ) { Text("RESTART", color = Color.White) }
             Button(
-                onClick = {
-                    startNode = ""
-                    destNode = ""
-                },
+                onClick = { startNode = ""; destNode = "" },
                 modifier = Modifier.weight(1f).height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-            ) { Text("RESET") }
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red) // Reset is Red
+            ) { Text("RESET", color = Color.White) }
         }
     }
 
     if (showPopup && lastResult != null) {
         AlertDialog(
             onDismissRequest = { showPopup = false },
-            title = { Text("Route Found!") },
+            containerColor = Color(0xFF1A1A1A),
+            title = { Text("Route Found!", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
-                Text("Start: ${lastResult?.start}\nEnd: ${lastResult?.end}\n\nPath: ${lastResult?.path?.joinToString(" → ")}\nTotal Cost: ${lastResult?.totalCost}", fontSize = 16.sp)
+                Column {
+                    Text("Starting Point: ${lastResult?.start}", color = Color.LightGray)
+                    Text("Destination: ${lastResult?.end}", color = Color.LightGray)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Optimal Path:", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(lastResult?.path?.joinToString(" → ") ?: "", color = Color.Cyan, fontSize = 18.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Total Cost: ${lastResult?.totalCost}", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                }
             },
-            confirmButton = { Button(onClick = { showPopup = false }) { Text("OK") } }
+            confirmButton = {
+                Button(onClick = { showPopup = false }) { Text("OK") }
+            }
         )
     }
 
     if (showErrorPopup) {
         AlertDialog(
             onDismissRequest = { showErrorPopup = false },
-            title = { Text("Invalid Input") },
-            text = { Text("Input can't be taken. Please enter valid nodes only (A, B, C, D, or E).") },
+            containerColor = Color(0xFF1A1A1A),
+            title = { Text("Invalid Input", color = Color.Red) },
+            text = { Text("Input can't be taken. Please enter valid nodes (A-E).", color = Color.White) },
             confirmButton = { Button(onClick = { showErrorPopup = false }) { Text("Try Again") } }
         )
     }
@@ -295,49 +356,39 @@ fun HistoryScreen(
     var showOnlyLiked by remember { mutableStateOf(false) }
     val displayList = if (showOnlyLiked) history.filter { it.isLiked } else history
 
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-        Text("ROUTE FINDING DETAILS", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-        Spacer(modifier = Modifier.height(8.dp))
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp).background(Color.Black)) {
+        Text("ROUTE HISTORY", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = { showOnlyLiked = !showOnlyLiked },
             modifier = Modifier.align(Alignment.CenterHorizontally),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (showOnlyLiked) Color(0xFFFFB74D) else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (showOnlyLiked) Color.White else Color.Black
-            )
+            colors = ButtonDefaults.buttonColors(containerColor = if (showOnlyLiked) Color(0xFFFFB74D) else Color.DarkGray)
         ) {
-            Icon(if (showOnlyLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text(if (showOnlyLiked) "Showing Liked Routes" else "Show All Routes")
+            Icon(if (showOnlyLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, tint = Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(if (showOnlyLiked) "Showing Liked" else "Show All", color = Color.White)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (displayList.isEmpty()) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(if (showOnlyLiked) "No liked routes yet." else "No history available.", color = Color.Gray)
-            }
-        } else {
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(displayList) { item ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                        elevation = CardDefaults.cardElevation(4.dp),
-                        colors = CardDefaults.cardColors(containerColor = if (item.isLiked) Color(0xFFFFF8E1) else MaterialTheme.colorScheme.surface)
-                    ) {
-                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Route: ${item.start} to ${item.end}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                Text("Path: ${item.path.joinToString(" → ")}", fontSize = 14.sp)
-                                Text("Total Cost: ${item.totalCost}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                            }
-                            IconButton(onClick = { onToggleLike(item) }) {
-                                Icon(imageVector = if (item.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = "Like", tint = if (item.isLiked) Color.Red else Color.Gray)
-                            }
-                            IconButton(onClick = { onDelete(item) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
-                            }
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            items(displayList) { item ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                ) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("${item.start} → ${item.end}", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("Path: ${item.path.joinToString(" → ")}", color = Color.Gray, fontSize = 12.sp)
+                            Text("Cost: ${item.totalCost}", color = Color.Cyan)
+                        }
+                        IconButton(onClick = { onToggleLike(item) }) {
+                            Icon(if (item.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, tint = if (item.isLiked) Color.Red else Color.Gray)
+                        }
+                        IconButton(onClick = { onDelete(item) }) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
                         }
                     }
                 }
@@ -345,14 +396,12 @@ fun HistoryScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onBack, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("BACK TO FINDER") }
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(
-            onClick = onNext,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-        ) {
-            Text("FINISH", fontWeight = FontWeight.Bold)
+        Button(onClick = onBack, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)) {
+            Text("BACK", color = Color.White)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = onNext, modifier = Modifier.fillMaxWidth()) {
+            Text("FINISH", color = Color.White)
         }
     }
 }
@@ -361,37 +410,23 @@ fun HistoryScreen(
 @Composable
 fun ExitScreen() {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(24.dp).background(Color.Black),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Pushes content below to center
         Spacer(modifier = Modifier.weight(1f))
-
-        Text(
-            text = "Team Hacksphere ⚡ ",
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.secondary
-        )
-
+        Text(text = "Team Hacksphere ⚡", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
         Spacer(modifier = Modifier.height(32.dp))
-
         Button(
             onClick = { exitProcess(0) },
             modifier = Modifier.width(200.dp).height(55.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)) // Standard Blue
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
         ) {
-            Text("BYE", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+            Text("BYE", fontWeight = FontWeight.Bold, color = Color.White)
         }
-
-        // Pushes content above to center
         Spacer(modifier = Modifier.weight(1f))
-
         Text(
             text = "MADE FOR AI",
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
-            color = Color.LightGray,
+            color = Color.Yellow, // Footer Yellow as requested
             fontWeight = FontWeight.Bold,
             letterSpacing = 2.sp
         )
