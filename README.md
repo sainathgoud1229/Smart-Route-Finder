@@ -1,106 +1,170 @@
-Smart Route Finder
+🚀 Smart Route Finder – AI Path Optimization App
+📌 Overview
 
-Smart Route Finder is an Android application that demonstrates how Artificial Intelligence algorithms can find the optimal path in a weighted graph.
-The app implements the Uniform Cost Search to compute the lowest-cost route between nodes.
+Smart Route Finder is an Android application that demonstrates how Artificial Intelligence finds the optimal path in a weighted graph using the Uniform Cost Search (UCS) algorithm.
 
-This project was developed as part of an Artificial Intelligence course project.
+The app allows users to select a start node and destination node, then calculates the lowest-cost path between them. It also visualizes the graph and stores previous results in a history section.
 
-Features
+This project was developed as part of an Artificial Intelligence course project (Units 1–3 concepts).
 
-• Graph visualization of nodes and weighted edges
-• Route calculation using Uniform Cost Search
-• Popup showing shortest path and total cost
-• Route history tracking
-• Like and delete routes from history
-• Reset and restart options
-• Simple and clean Jetpack Compose UI
+🧠 AI Concept Used
+Uniform Cost Search (UCS)
 
-App Flow
-1. Welcome Screen
+Uniform Cost Search is a graph traversal algorithm that expands the node with the lowest path cost first.
 
-Displays the project introduction and features:
+Key features:
 
-Graph Visualization
+Guarantees the optimal path
 
-Step-by-Step Search
+Uses a Priority Queue
 
-Optimal Path Discovery
+Works on weighted graphs
 
-A Start button takes the user to the route finder.
+Algorithm steps:
 
-2. Route Finder
+Start from the initial node.
 
-Users select:
+Add nodes to a priority queue based on cost.
 
-Start Node
+Always expand the lowest cost node first.
 
-Destination Node
+Continue until the goal node is reached.
 
-The system runs Uniform Cost Search to calculate the optimal path.
+Return the optimal path and total cost.
 
-The result popup shows:
+📱 Application Features
+🏠 Home Screen
 
-Start Node
-Destination Node
-Shortest Path
-Total Cost
+Displays the app logo and introduction
 
-Example:
+Explains the purpose of the application
 
-Start: A
-End: E
-Path: A → C → D → E
-Total Cost: 7
-3. History Screen
+Start button to begin route search
 
-Shows previously calculated routes.
+🔎 Route Finder
 
 Users can:
 
-Like a route
+Select Start Node
 
-Delete a route
+Select Destination Node
+
+Calculate the optimal path
+
+View:
+
+Path sequence
+
+Total cost
+
+📊 Graph Visualization
+
+The application visually displays a weighted graph with nodes and edges.
+
+Nodes:
+
+A, B, C, D, E
+
+Example Graph:
+
+A → B (4)
+A → C (2)
+B → D (5)
+B → E (10)
+C → D (3)
+D → E (2)
+⭐ Route History
+
+The app stores previous searches.
+
+Features:
+
+View past routes
+
+Like favorite routes
+
+Delete routes
 
 Filter liked routes
 
-4. Exit Screen
+📦 Data Persistence
 
-Displays project credits and allows the user to close the app.
+Search history is stored using:
 
-Algorithm Used
+SharedPreferences
 
-The application uses Uniform Cost Search.
+Gson JSON serialization
 
-Uniform Cost Search works by:
+🛠 Technologies Used
 
-Expanding the node with the lowest path cost.
+Kotlin
 
-Using a priority queue to select the next node.
+Android Studio
 
-Continuing until the destination node is reached.
+Jetpack Compose
 
-Returning the lowest-cost path.
+Material 3 UI
 
-Graph Structure Used
-A → B = 4
-A → C = 2
-B → D = 5
-B → E = 10
-C → D = 3
-D → E = 2
+Gson Library
 
-Nodes:
-A, B, C, D, E
+Priority Queue (Java/Kotlin)
 
-Tech Stack
+🧩 App Architecture
+MainActivity
+ ├── Home Screen
+ ├── Finder Screen
+ │     └── Uniform Cost Search Algorithm
+ ├── History Screen
+ └── Exit Screen
 
-• Kotlin
-• Jetpack Compose
-• Android Studio
-• Material Design 3
+Core Components:
 
-Team
+Edge → Represents graph edges
+PathResult → Stores search results
+NodeState → Used in priority queue
+GraphVisualizer → Displays graph UI
+📷 App Workflow
+Home Screen
+      ↓
+Route Finder
+      ↓
+Path Calculation (UCS Algorithm)
+      ↓
+Result Popup
+      ↓
+History Screen
+      ↓
+Exit Screen
+🧪 Example Output
+
+Input:
+
+Start Node: A
+Destination: E
+
+Output:
+
+Optimal Path:
+A → C → D → E
+
+Total Cost:
+7
+🎯 Learning Objectives
+
+This project demonstrates:
+
+Graph search algorithms
+
+Artificial Intelligence path finding
+
+Android app development
+
+Data persistence in mobile apps
+
+UI development with Jetpack Compose
+
+👨‍💻 Team
 
 Team Hacksphere ⚡
 
-Developed for an Artificial Intelligence academic project.
+Developed for AI Course Project
