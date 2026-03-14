@@ -1,25 +1,24 @@
 Smart Route Finder
 
 Smart Route Finder is an Android application that demonstrates how Artificial Intelligence algorithms can find the optimal path in a weighted graph.
-The app implements the Uniform Cost Search (UCS) in AI to compute the lowest-cost route between nodes.
+The app implements the Uniform Cost Search to compute the lowest-cost route between nodes.
+
 This project was developed as part of an Artificial Intelligence course project.
 
 Features
 
-• Interactive graph visualization
+• Graph visualization of nodes and weighted edges
 • Route calculation using Uniform Cost Search
-• Popup displaying shortest path and total cost
+• Popup showing shortest path and total cost
 • Route history tracking
-• Like and delete saved routes
-• Reset and restart functionality
-• Modern UI built with Jetpack Compose
+• Like and delete routes from history
+• Reset and restart options
+• Simple and clean Jetpack Compose UI
 
-Application Screens
-Welcome Screen
+App Flow
+1. Welcome Screen
 
-Introduces the application and explains the AI concept.
-
-Features shown:
+Displays the project introduction and features:
 
 Graph Visualization
 
@@ -27,60 +26,62 @@ Step-by-Step Search
 
 Optimal Path Discovery
 
-A Start button navigates to the route finder.
+A Start button takes the user to the route finder.
 
-Route Finder
+2. Route Finder
 
 Users select:
 
-• Start Node
-• Destination Node
+Start Node
 
-The system runs Uniform Cost Search to compute the optimal path.
+Destination Node
 
-Example output:
+The system runs Uniform Cost Search to calculate the optimal path.
+
+The result popup shows:
+
+Start Node
+Destination Node
+Shortest Path
+Total Cost
+
+Example:
 
 Start: A
 End: E
-
-Shortest Path:
-A → C → D → E
-
+Path: A → C → D → E
 Total Cost: 7
-History Screen
+3. History Screen
 
-Displays previously calculated routes.
+Shows previously calculated routes.
 
 Users can:
 
-• Like important routes
-• Delete routes
-• Filter liked routes
+Like a route
 
-Exit Screen
+Delete a route
 
-Shows project credits and allows users to close the application.
+Filter liked routes
 
-Algorithm Explanation
+4. Exit Screen
 
-The application uses Uniform Cost Search, a search algorithm commonly used in Artificial Intelligence for optimal pathfinding.
+Displays project credits and allows the user to close the app.
 
-Steps:
+Algorithm Used
 
-Start from the initial node.
+The application uses Uniform Cost Search.
 
-Use a priority queue to expand the node with the lowest cumulative cost.
+Uniform Cost Search works by:
 
-Continue exploring nodes while tracking visited nodes.
+Expanding the node with the lowest path cost.
 
-Stop when the destination node is reached.
+Using a priority queue to select the next node.
 
-Return the path with the minimum cost.
+Continuing until the destination node is reached.
 
-Graph Structure
+Returning the lowest-cost path.
 
-The application uses the following weighted graph:
-
+Graph Structure Used
 A → B = 4
 A → C = 2
 B → D = 5
@@ -89,7 +90,6 @@ C → D = 3
 D → E = 2
 
 Nodes:
-
 A, B, C, D, E
 
 Tech Stack
@@ -99,18 +99,8 @@ Tech Stack
 • Android Studio
 • Material Design 3
 
-Installation
-
-Clone the repository
-
-git clone https://github.com/yourusername/smart-route-finder.git
-
-Open the project in Android Studio
-
-Build and run the application on an emulator or Android device.
-
 Team
 
 Team Hacksphere ⚡
 
-Developed for an Artificial Intelligence project demonstrating pathfinding algorithms.
+Developed for an Artificial Intelligence academic project.
